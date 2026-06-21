@@ -39,57 +39,26 @@ class Tty:
         self.link_attr: int
         self.element_attr: int
 
-        if curses.can_change_color() and curses.COLORS >= 16:
-            for idx, hexval in enumerate(PALETTE):
-                try:
-                    curses.init_color(idx, *hex_to_rgb(hexval))
-                except curses.error:
-                    break
-            curses.init_pair(1, 7, 8)   # Default
-            curses.init_pair(2, 4, 8)   # Ok/Reset buttons
-            curses.init_pair(3, 0, 12)  # Highlight
-            curses.init_pair(4, 1, 12)  # Error
-            curses.init_pair(5, 0, 6)   # Success
-            curses.init_pair(6, 1, 8)
-            curses.init_pair(7, 2, 8)
-            curses.init_pair(8, 3, 8)
-            curses.init_pair(9, 4, 8)
-            curses.init_pair(10, 5, 8)
-            curses.init_pair(11, 4, 8)  # Link text - PALETTE index 4 (#7fbcb4)
-            curses.init_pair(12, 3, 8)  # Removed-element placeholder text (e.g. "[image]")
-            self.default_attr = color(1)
-            self.ok_attr = color(2)
-            self.highlight_attr = color(3)
-            self.error_attr = color(4)
-            self.success_attr = color(5)
-            self.splash_attrs = [color(6), color(7), color(8), color(9), color(10)]
-            self.link_attr = color(11) | curses.A_BOLD
-            self.element_attr = color(12)
-            try:
-                self.stdscr.bkgd(' ', self.default_attr)
-            except curses.error:
-                pass
-        else:
-            # Fallback for terminals without 16-color / palette redefinition support
-            curses.init_pair(1, -1, -1)
-            curses.init_pair(2, curses.COLOR_BLUE, -1)
-            curses.init_pair(4, curses.COLOR_RED, -1)
-            curses.init_pair(5, curses.COLOR_GREEN, -1)
-            curses.init_pair(6, curses.COLOR_RED, -1)
-            curses.init_pair(7, curses.COLOR_GREEN, -1)
-            curses.init_pair(8, curses.COLOR_YELLOW, -1)
-            curses.init_pair(9, curses.COLOR_BLUE, -1)
-            curses.init_pair(10, curses.COLOR_MAGENTA, -1)
-            curses.init_pair(11, curses.COLOR_CYAN, -1)
-            curses.init_pair(12, curses.COLOR_YELLOW, -1)
-            self.default_attr = color(1)
-            self.ok_attr = color(2)
-            self.highlight_attr = curses.A_REVERSE
-            self.error_attr = color(4)
-            self.success_attr = color(5)
-            self.splash_attrs = [color(6), color(7), color(8), color(9), color(10)]
-            self.link_attr = color(11) | curses.A_BOLD
-            self.element_attr = color(12)
+        # Default terminal colors (no custom RGB palette redefinition)
+        curses.init_pair(1, -1, -1)
+        curses.init_pair(2, curses.COLOR_BLUE, -1)
+        curses.init_pair(4, curses.COLOR_RED, -1)
+        curses.init_pair(5, curses.COLOR_GREEN, -1)
+        curses.init_pair(6, curses.COLOR_RED, -1)
+        curses.init_pair(7, curses.COLOR_GREEN, -1)
+        curses.init_pair(8, curses.COLOR_YELLOW, -1)
+        curses.init_pair(9, curses.COLOR_BLUE, -1)
+        curses.init_pair(10, curses.COLOR_MAGENTA, -1)
+        curses.init_pair(11, curses.COLOR_CYAN, -1)
+        curses.init_pair(12, curses.COLOR_YELLOW, -1)
+        self.default_attr = color(1)
+        self.ok_attr = color(2)
+        self.highlight_attr = curses.A_REVERSE
+        self.error_attr = color(4)
+        self.success_attr = color(5)
+        self.splash_attrs = [color(6), color(7), color(8), color(9), color(10)]
+        self.link_attr = color(11) | curses.A_BOLD
+        self.element_attr = color(12)
 
     def intro_print(self, text: str | bytes, attr: int | None = None) -> None:
         if attr is None:
@@ -390,13 +359,13 @@ class MessageList:
         self.render_modeline()
 
     def render_modeline(self) -> None:
-        rows, _ = self.tty.size
+        rows, cols = self.tty.size
         total = len(self.ids)
         pos = self.cursor + 1 if total else 0
         text = f'({pos} / {total})'
-        self.tty.stdscr.move(rows - 1, 0)
-        self.tty.stdscr.clrtoeol()
-        self.tty.safe_addstr(self.tty.stdscr, rows - 1, 0, text, self.tty.default_attr)
+        row = rows - 2  # row rows-1 is the window border's bottom edge
+        self.tty.safe_addstr(self.tty.stdscr, row, 1, ' ' * (cols - 2), self.tty.highlight_attr)
+        self.tty.safe_addstr(self.tty.stdscr, row, 1, text, self.tty.highlight_attr|curses.A_BOLD)
         self.tty.stdscr.refresh()
 
     def open_message(self) -> None:
@@ -539,27 +508,28 @@ class App:
     def active(self) -> MessageList:
         return self.tabs[self.order[self.index]]
 
-    def render_tab_bar(self) -> None:
-        self.tty.stdscr.move(0, 0)
-        self.tty.stdscr.clrtoeol()
-        x = 1
+    def render_top_bar(self) -> None:
+        cols = self.tty.size[1]
+        # Row 0 is the window border's top edge, so the tab bar lives on row 1.
+        self.tty.safe_addstr(self.tty.stdscr, 1, 1, ' ' * (cols - 2), self.tty.default_attr)
+        x = 2
         for i, name in enumerate(self.order):
             label = f' {name} '
             attr = self.tty.highlight_attr if i == self.index else self.tty.default_attr
-            self.tty.safe_addstr(self.tty.stdscr, 0, x, label, attr)
+            self.tty.safe_addstr(self.tty.stdscr, 1, x, label, attr)
             x += len(label) + 1
         self.tty.stdscr.refresh()
 
     def run(self) -> None:
         _ = curses.curs_set(0)
         self.tty.stdscr.clear()
-        self.tty.stdscr.refresh()
         rows, cols = self.tty.size
         for tab in self.tabs.values():
-            tab.win = self.tty.stdscr.derwin(rows - 2, cols, 1, 0)
+            tab.win = self.tty.stdscr.derwin(rows - 4, cols - 2, 2, 1)
         self.active().ensure_loaded()
         while True:
-            self.render_tab_bar()
+            self.tty.stdscr.border()
+            self.render_top_bar()
             active = self.active()
             active.render()
             key = self.tty.stdscr.getch()
