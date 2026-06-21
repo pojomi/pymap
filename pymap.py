@@ -24,7 +24,5 @@ def main(stdscr: window) -> None:
         mail.server.logout()
     except Exception:
         pass
-
-
 # Wrapper is from curses module; initializes window, colors, etc automatically
 wrapper(main)

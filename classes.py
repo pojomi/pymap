@@ -17,7 +17,8 @@ from crypto_utils import crypto_available
 from html_utils import strip_html, looks_like_html
 from linkify import clean_stray_newline_markers, linkify_line, split_into_lines, trim_lines, merge_bracket_image_links
 from imap_utils import parse_mailbox_name, quote_mailbox, fetch_message_headers
-from popup import show_popup
+from popup import show_popup, prompt_input
+from fuzzy_search import fuzzy_score, FUZZY_THRESHOLD
 
 
 class Tty:
@@ -492,6 +493,41 @@ class InboxList(MessageList):
         super().__init__(tty, mail, search_criteria='ALL', sort_desc=True)
 
 
+class SearchList(MessageList):
+    def __init__(self, tty: Tty, mail: Mail, candidates: list[dict[str, Any]]):
+        # Not an IMAP query: a local fuzzy match over messages that have
+        # already been retrieved into other tabs (search_criteria is unused).
+        super().__init__(tty, mail, search_criteria='', sort_desc=False)
+        self.candidates: list[dict[str, Any]] = candidates
+        self.query: str = ''
+        self.initialized = True
+        self.update_query('')
+
+    def update_query(self, query: str) -> None:
+        # Re-scores the fixed candidate pool against the latest query text -
+        # called on every keystroke while the search box is open, so results
+        # populate live as the user types.
+        self.query = query
+        scored: list[tuple[float, dict[str, Any]]] = []
+        if query.strip():
+            for msg in self.candidates:
+                haystack = f"{msg['from']} {msg['subject']}"
+                score = fuzzy_score(query, haystack)
+                if score >= FUZZY_THRESHOLD:
+                    scored.append((score, msg))
+            scored.sort(key=lambda pair: pair[0], reverse=True)
+        self.messages = [dict(msg, selected=False) for _, msg in scored]
+        self.ids = [m['id'] for m in self.messages]
+        self.cursor = 0
+        self.top = 0
+
+    def refresh_messages(self) -> None:
+        # Search results are a local, point-in-time fuzzy match over
+        # already-retrieved messages - there is no live IMAP query to re-run.
+        self.cursor = 0
+        self.top = 0
+
+
 class App:
     def __init__(self, tty: Tty, mail: Mail):
         self.tty: Tty = tty
@@ -503,6 +539,8 @@ class App:
         }
         self._rewire_siblings()
         self.index: int = 0
+        # Tab to return to when the Search tab is closed (via Esc or Tab)
+        self.previous_tab: str = 'Unread'
 
     def active(self) -> MessageList:
         return self.tabs[self.order[self.index]]
@@ -530,6 +568,59 @@ class App:
             x += len(label) + 1
         self.tty.stdscr.refresh()
 
+    def _collect_search_candidates(self) -> list[dict[str, Any]]:
+        # Messages already retrieved into other tabs (deduplicated by id) -
+        # the fuzzy search only ever looks at what's already in memory, not
+        # whatever else may exist on the server.
+        seen: set[str] = set()
+        candidates: list[dict[str, Any]] = []
+        for name, tab in self.tabs.items():
+            if name == 'Search' or not tab.initialized:
+                continue
+            for msg in tab.messages:
+                if msg['id'] not in seen:
+                    seen.add(msg['id'])
+                    candidates.append(msg)
+        return candidates
+
+    def open_search(self) -> None:
+        if self.order[self.index] != 'Search':
+            self.previous_tab = self.order[self.index]
+        candidates = self._collect_search_candidates()
+        if 'Search' in self.tabs:
+            del self.tabs['Search']
+            self.order.remove('Search')
+        self.order.append('Search')
+        search_list = SearchList(self.tty, self.mail, candidates)
+        rows, cols = self.tty.size
+        search_list.win = self.tty.stdscr.derwin(rows - 4, cols - 2, 2, 1)
+        self.tabs['Search'] = search_list
+        self._rewire_siblings()
+        self.index = self.order.index('Search')
+
+        def on_change(buf: str) -> None:
+            search_list.update_query(buf)
+            self.tty.stdscr.border()
+            self.render_top_bar()
+            search_list.render()
+
+        query = prompt_input(self.tty, 'Search', 'Press Esc to cancel', on_change=on_change)
+        self.tty.stdscr.clear()
+        if not query:
+            # Cancelled, or submitted with no text typed - discard the tab
+            # and return to exactly where the user was, with no re-query.
+            self.close_search(refresh=False)
+
+    def close_search(self, refresh: bool = True) -> None:
+        if 'Search' in self.tabs:
+            del self.tabs['Search']
+            self.order.remove('Search')
+            self._rewire_siblings()
+        self.index = self.order.index(self.previous_tab) if self.previous_tab in self.order else 0
+        if refresh:
+            self.active().refresh_messages()
+        self.tty.stdscr.clear()
+
     def run(self) -> None:
         _ = curses.curs_set(0)
         self.tty.stdscr.clear()
@@ -543,15 +634,24 @@ class App:
             active = self.active()
             active.render()
             key = self.tty.stdscr.getch()
-            if key == ord('\t'):
-                self.index = (self.index + 1) % len(self.order)
-                self.tty.stdscr.clear()
-                self.active().refresh_messages()
+            if key in (ord('\t'), 27):
+                if self.order[self.index] == 'Search':
+                    # Esc cancels the search outright (no refresh, returns
+                    # to exactly where the user was); Tab still refreshes
+                    # the tab being switched to, as elsewhere in the app.
+                    self.close_search(refresh=(key == ord('\t')))
+                elif key == ord('\t'):
+                    self.index = (self.index + 1) % len(self.order)
+                    self.tty.stdscr.clear()
+                    self.active().refresh_messages()
                 continue
             if key in (ord('q'), ord('Q')):
                 break
             if key in (ord('r'), ord('R')):
                 self.refresh_all_tabs()
+                continue
+            if key == ord('/'):
+                self.open_search()
                 continue
             active.handle_key(key)
 
