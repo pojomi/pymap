@@ -13,7 +13,7 @@ from html import unescape
 from colors import PALETTE, hex_to_rgb, color
 from crypto_utils import crypto_available
 from html_utils import strip_html, looks_like_html
-from linkify import clean_stray_newline_markers, linkify_line, split_into_lines
+from linkify import clean_stray_newline_markers, linkify_line, split_into_lines, trim_lines, merge_bracket_image_links
 from imap_utils import parse_mailbox_name, quote_mailbox, fetch_message_headers
 from popup import show_popup
 
@@ -35,6 +35,7 @@ class Tty:
         self.success_attr: int
         self.splash_attrs: list[int]
         self.link_attr: int
+        self.element_attr: int
 
         if curses.can_change_color() and curses.COLORS >= 16:
             for idx, hexval in enumerate(PALETTE):
@@ -53,6 +54,7 @@ class Tty:
             curses.init_pair(9, 4, 8)
             curses.init_pair(10, 5, 8)
             curses.init_pair(11, 4, 8)  # Link text - PALETTE index 4 (#7fbcb4)
+            curses.init_pair(12, 3, 8)  # Removed-element placeholder text (e.g. "[image]")
             self.default_attr = color(1)
             self.ok_attr = color(2)
             self.highlight_attr = color(3)
@@ -60,6 +62,7 @@ class Tty:
             self.success_attr = color(5)
             self.splash_attrs = [color(6), color(7), color(8), color(9), color(10)]
             self.link_attr = color(11) | curses.A_BOLD
+            self.element_attr = color(12)
             try:
                 self.stdscr.bkgd(' ', self.default_attr)
             except curses.error:
@@ -76,6 +79,7 @@ class Tty:
             curses.init_pair(9, curses.COLOR_BLUE, -1)
             curses.init_pair(10, curses.COLOR_MAGENTA, -1)
             curses.init_pair(11, curses.COLOR_CYAN, -1)
+            curses.init_pair(12, curses.COLOR_YELLOW, -1)
             self.default_attr = color(1)
             self.ok_attr = color(2)
             self.highlight_attr = curses.A_REVERSE
@@ -83,6 +87,7 @@ class Tty:
             self.success_attr = color(5)
             self.splash_attrs = [color(6), color(7), color(8), color(9), color(10)]
             self.link_attr = color(11) | curses.A_BOLD
+            self.element_attr = color(12)
 
     def intro_print(self, text: str | bytes, attr: int | None = None) -> None:
         if attr is None:
@@ -177,7 +182,7 @@ class Reader:
         self.tty: Tty = tty
         self.mail: Mail = mail
         self.lines: list[str] = []
-        self.link_spans: list[list[tuple[int, int]]] = []
+        self.link_spans: list[list[tuple[int, int, str]]] = []
         self.top: int = 0
         self.win: curses.window
 
@@ -198,6 +203,8 @@ class Reader:
         text, anchor_spans = self.extract_text(msg)
         text, spans = clean_stray_newline_markers(text, anchor_spans)
         lines, line_spans = split_into_lines(text, spans)
+        lines, line_spans = trim_lines(lines, line_spans)
+        lines, line_spans = merge_bracket_image_links(lines, line_spans)
         self.lines = lines or ['(No content)']
         self.link_spans = line_spans or [[]]
         self.linkify()
@@ -212,7 +219,7 @@ class Reader:
         self.lines = new_lines
         self.link_spans = new_spans
 
-    def extract_text(self, msg) -> tuple[str, list[tuple[int, int]]]:
+    def extract_text(self, msg) -> tuple[str, list[tuple[int, int, str]]]:
         if msg.is_multipart():
             plain = None
             html_part = None
@@ -273,12 +280,13 @@ class Reader:
             self.render_line(y, self.lines[idx], self.link_spans[idx])
         self.win.refresh()
 
-    def render_line(self, y: int, line: str, spans: list[tuple[int, int]]) -> None:
+    def render_line(self, y: int, line: str, spans: list[tuple[int, int, str]]) -> None:
         pos = 0
-        for start, end in spans:
+        for start, end, kind in spans:
             if start > pos:
                 self.tty.safe_addstr(self.win, y, pos, line[pos:start])
-            self.tty.safe_addstr(self.win, y, start, line[start:end], self.tty.link_attr)
+            attr = self.tty.element_attr if kind == 'element' else self.tty.link_attr
+            self.tty.safe_addstr(self.win, y, start, line[start:end], attr)
             pos = end
         if pos < len(line):
             self.tty.safe_addstr(self.win, y, pos, line[pos:])
