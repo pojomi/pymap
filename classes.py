@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 from typing import Any
+from typing import cast
 import curses
 import re
 from os import path, getenv, mkdir, remove
@@ -8,6 +9,7 @@ from imaplib import IMAP4_SSL as imap
 import socket
 from time import sleep
 from email import message_from_bytes
+from email.message import Message
 from html import unescape
 
 from colors import PALETTE, hex_to_rgb, color
@@ -199,7 +201,7 @@ class Reader:
         if not isinstance(raw, bytes):
             self.lines = ['(Unable to retrieve message)']
             return
-        msg = message_from_bytes(raw)
+        msg: Message = message_from_bytes(raw)
         text, anchor_spans = self.extract_text(msg)
         text, spans = clean_stray_newline_markers(text, anchor_spans)
         lines, line_spans = split_into_lines(text, spans)
@@ -219,7 +221,7 @@ class Reader:
         self.lines = new_lines
         self.link_spans = new_spans
 
-    def extract_text(self, msg) -> tuple[str, list[tuple[int, int, str]]]:
+    def extract_text(self, msg: Message) -> tuple[str, list[tuple[int, int, str]]]:
         if msg.is_multipart():
             plain = None
             html_part = None
@@ -246,7 +248,7 @@ class Reader:
             return unescape(content), []
 
     def decode_part(self, part) -> str:
-        # get_payload(decode=True) handles Base64 / Quoted-Printable transfer encodings
+        """Handles Base64 / QP decoding. Returns decoded string."""
         payload = part.get_payload(decode=True) or b''
         charset = part.get_content_charset() or 'utf-8'
         try:
@@ -377,7 +379,8 @@ class MessageList:
         for row_idx, msg_idx in enumerate(range(self.top, end)):
             msg = self.messages[msg_idx]
             y = row_idx * 2
-            attr = self.tty.highlight_attr if msg_idx == self.cursor else self.tty.default_attr
+            # curses has no true semi-bold attribute - A_BOLD is the closest available
+            attr = self.tty.highlight_attr | curses.A_BOLD if msg_idx == self.cursor else self.tty.default_attr
             marker = '*' if msg['selected'] else ' '
             self.tty.safe_addstr(self.win, y, 0, f"{marker}From: {msg['from']}", attr)
             self.tty.safe_addstr(self.win, y + 1, 0, f" Subject: {msg['subject']}", attr)
@@ -396,10 +399,6 @@ class MessageList:
         self.tty.safe_addstr(self.tty.stdscr, rows - 1, 0, text, self.tty.default_attr)
         self.tty.stdscr.refresh()
 
-    def post_read(self, msg: dict[str, Any]) -> None:
-        # Default: message stays visible (e.g. Inbox view shows read mail too)
-        pass
-
     def open_message(self) -> None:
         if not self.messages:
             return
@@ -410,7 +409,6 @@ class MessageList:
         except self.mail.server.error:
             return
         reader.run()
-        self.post_read(msg)
         self.tty.stdscr.clear()
 
     def find_archive_mailbox(self) -> str | None:
@@ -581,7 +579,7 @@ class User:
         self.mail: Mail = mail
         self.home: str | None = getenv('HOME')
         self.cfg_dir: str = '.pymap'
-        self.cfg_path: str = path.join(self.home, self.cfg_dir)
+        self.cfg_path: str = path.join(cast(str, self.home), self.cfg_dir)
         self.cfg_email: str = path.join(self.cfg_path, '.email')
         self.cfg_pass: str = path.join(self.cfg_path, '.pass')
         self.cfg_token: str = path.join(self.cfg_path, '.token')
