@@ -416,8 +416,8 @@ class MessageList:
             sibling.purge(ids)
         self.tty.stdscr.clear()
 
-    def refresh(self) -> None:
-        # Re-fetches ids and the first page from the server, discarding cached state
+    def refresh_messages(self) -> None:
+        """Re-fetches ids and the first page from the server, discarding cached state"""
         self.ids = []
         self.messages = []
         self.cursor = 0
@@ -426,10 +426,10 @@ class MessageList:
         self.ensure_loaded()
 
     def refresh_everywhere(self) -> None:
-        self.refresh()
+        self.refresh_messages()
         for sibling in self.sibling_lists:
             if sibling.initialized:
-                sibling.refresh()
+                sibling.refresh_messages()
         self.tty.stdscr.clear()
 
     def delete_selected(self) -> None:
@@ -501,12 +501,22 @@ class App:
             'Unread': UnreadList(tty, mail),
             'Inbox': InboxList(tty, mail),
         }
-        for name in self.order:
-            self.tabs[name].sibling_lists = [self.tabs[n] for n in self.order if n != name]
+        self._rewire_siblings()
         self.index: int = 0
 
     def active(self) -> MessageList:
         return self.tabs[self.order[self.index]]
+
+    def _rewire_siblings(self) -> None:
+        for name in self.order:
+            self.tabs[name].sibling_lists = [self.tabs[n] for n in self.order if n != name]
+
+    def refresh_all_tabs(self) -> None:
+        # Reloads every tab's messages from the server simultaneously,
+        # regardless of whether a tab has been visited/initialized yet.
+        for tab in self.tabs.values():
+            tab.refresh_messages()
+        self.tty.stdscr.clear()
 
     def render_top_bar(self) -> None:
         cols = self.tty.size[1]
@@ -536,10 +546,13 @@ class App:
             if key == ord('\t'):
                 self.index = (self.index + 1) % len(self.order)
                 self.tty.stdscr.clear()
-                self.active().refresh()
+                self.active().refresh_messages()
                 continue
             if key in (ord('q'), ord('Q')):
                 break
+            if key in (ord('r'), ord('R')):
+                self.refresh_all_tabs()
+                continue
             active.handle_key(key)
 
 
