@@ -1,6 +1,10 @@
 #!/usr/bin/env python3
 from __future__ import annotations
+<<<<<<< HEAD
 from typing import TYPE_CHECKING, Callable
+=======
+from typing import TYPE_CHECKING
+>>>>>>> c2892da (rebase local changes on main)
 import curses
 
 if TYPE_CHECKING:
@@ -20,6 +24,7 @@ def show_popup(tty: 'Tty', text: str) -> None:
     win.border()
     tty.safe_addstr(win, 1, max(1, (width - len(text)) // 2), text, tty.ok_attr)
     win.refresh()
+<<<<<<< HEAD
 
 
 def prompt_input(
@@ -82,3 +87,5 @@ def prompt_input(
             redraw_box()
     finally:
         _ = curses.curs_set(0)
+=======
+>>>>>>> c2892da (rebase local changes on main)

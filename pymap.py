@@ -1,19 +1,32 @@
 #!/usr/bin/env python3
 from curses import wrapper, window
 <<<<<<< HEAD
+<<<<<<< HEAD
 from classes import Tty, Splash, User, Mail, App
 
 
 def main(stdscr: window) -> None:
     tty: Tty = Tty(stdscr)
 =======
+=======
+>>>>>>> c2892da (rebase local changes on main)
 from time import sleep
 from pymap_classes import Tty, Splash, User, Mail, Unread, Inbox
 #import re -- might want this at some point (regex module)
 
 def main(stdscr:window):
     tty:Tty = Tty(stdscr)
+<<<<<<< HEAD
 >>>>>>> 2db2a01 (WIP)
+=======
+=======
+from classes import Tty, Splash, User, Mail, App
+
+
+def main(stdscr: window) -> None:
+    tty: Tty = Tty(stdscr)
+>>>>>>> 3815c75 (WIP)
+>>>>>>> c2892da (rebase local changes on main)
     tty.size = stdscr.getmaxyx()
     splash: Splash = Splash(tty)
     splash.load_pos()
@@ -25,23 +38,36 @@ def main(stdscr:window):
     # Refresh the screen to show changes
     stdscr.refresh()
 <<<<<<< HEAD
+<<<<<<< HEAD
     mail: Mail = Mail(tty)
     user: User = User(tty, mail)
 =======
+=======
+>>>>>>> c2892da (rebase local changes on main)
     mail:object = Mail(tty)
     unread:object = Unread(tty, mail)
     inbox:Inbox = Inbox(tty, mail)
     user:User = User(tty, mail, unread, inbox)
+<<<<<<< HEAD
 >>>>>>> 2db2a01 (WIP)
+=======
+=======
+    mail: Mail = Mail(tty)
+    user: User = User(tty, mail)
+>>>>>>> 3815c75 (WIP)
+>>>>>>> c2892da (rebase local changes on main)
     user.init()
     app: App = App(tty, mail)
     app.run()
     try:
 <<<<<<< HEAD
+<<<<<<< HEAD
         mail.server.logout()
     except Exception:
         pass
 =======
+=======
+>>>>>>> c2892da (rebase local changes on main)
         unread.get_ids()
     except mail.server.error:
         tty.intro_print('Error retrieving unread message ids', 1)
@@ -65,6 +91,12 @@ def main(stdscr:window):
                 break
             case _:
                 pass
+=======
+        mail.server.logout()
+    except Exception:
+        pass
+
+>>>>>>> 3815c75 (WIP)
 
 >>>>>>> 2db2a01 (WIP)
 # Wrapper is from curses module; initializes window, colors, etc automatically

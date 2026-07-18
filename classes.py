@@ -1,7 +1,10 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 from typing import Any
+<<<<<<< HEAD
 from typing import cast
+=======
+>>>>>>> c2892da (rebase local changes on main)
 import curses
 import re
 from os import path, getenv, mkdir, remove
@@ -9,16 +12,25 @@ from imaplib import IMAP4_SSL as imap
 import socket
 from time import sleep
 from email import message_from_bytes
+<<<<<<< HEAD
 from email.message import Message
+=======
+>>>>>>> c2892da (rebase local changes on main)
 from html import unescape
 
 from colors import PALETTE, hex_to_rgb, color
 from crypto_utils import crypto_available
 from html_utils import strip_html, looks_like_html
+<<<<<<< HEAD
 from linkify import clean_stray_newline_markers, linkify_line, split_into_lines, trim_lines, merge_bracket_image_links
 from imap_utils import parse_mailbox_name, quote_mailbox, fetch_message_headers
 from popup import show_popup, prompt_input
 from fuzzy_search import fuzzy_score, FUZZY_THRESHOLD
+=======
+from linkify import clean_stray_newline_markers, linkify_line, split_into_lines
+from imap_utils import parse_mailbox_name, quote_mailbox, fetch_message_headers
+from popup import show_popup
+>>>>>>> c2892da (rebase local changes on main)
 
 
 class Tty:
@@ -38,6 +50,7 @@ class Tty:
         self.success_attr: int
         self.splash_attrs: list[int]
         self.link_attr: int
+<<<<<<< HEAD
         self.element_attr: int
 
         # Default terminal colors (no custom RGB palette redefinition)
@@ -60,6 +73,56 @@ class Tty:
         self.splash_attrs = [color(6), color(7), color(8), color(9), color(10)]
         self.link_attr = color(11) | curses.A_BOLD
         self.element_attr = color(12)
+=======
+
+        if curses.can_change_color() and curses.COLORS >= 16:
+            for idx, hexval in enumerate(PALETTE):
+                try:
+                    curses.init_color(idx, *hex_to_rgb(hexval))
+                except curses.error:
+                    break
+            curses.init_pair(1, 7, 8)   # Default
+            curses.init_pair(2, 4, 8)   # Ok/Reset buttons
+            curses.init_pair(3, 0, 12)  # Highlight
+            curses.init_pair(4, 1, 12)  # Error
+            curses.init_pair(5, 0, 6)   # Success
+            curses.init_pair(6, 1, 8)
+            curses.init_pair(7, 2, 8)
+            curses.init_pair(8, 3, 8)
+            curses.init_pair(9, 4, 8)
+            curses.init_pair(10, 5, 8)
+            curses.init_pair(11, 4, 8)  # Link text - PALETTE index 4 (#7fbcb4)
+            self.default_attr = color(1)
+            self.ok_attr = color(2)
+            self.highlight_attr = color(3)
+            self.error_attr = color(4)
+            self.success_attr = color(5)
+            self.splash_attrs = [color(6), color(7), color(8), color(9), color(10)]
+            self.link_attr = color(11) | curses.A_BOLD
+            try:
+                self.stdscr.bkgd(' ', self.default_attr)
+            except curses.error:
+                pass
+        else:
+            # Fallback for terminals without 16-color / palette redefinition support
+            curses.init_pair(1, -1, -1)
+            curses.init_pair(2, curses.COLOR_BLUE, -1)
+            curses.init_pair(4, curses.COLOR_RED, -1)
+            curses.init_pair(5, curses.COLOR_GREEN, -1)
+            curses.init_pair(6, curses.COLOR_RED, -1)
+            curses.init_pair(7, curses.COLOR_GREEN, -1)
+            curses.init_pair(8, curses.COLOR_YELLOW, -1)
+            curses.init_pair(9, curses.COLOR_BLUE, -1)
+            curses.init_pair(10, curses.COLOR_MAGENTA, -1)
+            curses.init_pair(11, curses.COLOR_CYAN, -1)
+            self.default_attr = color(1)
+            self.ok_attr = color(2)
+            self.highlight_attr = curses.A_REVERSE
+            self.error_attr = color(4)
+            self.success_attr = color(5)
+            self.splash_attrs = [color(6), color(7), color(8), color(9), color(10)]
+            self.link_attr = color(11) | curses.A_BOLD
+>>>>>>> c2892da (rebase local changes on main)
 
     def intro_print(self, text: str | bytes, attr: int | None = None) -> None:
         if attr is None:
@@ -154,7 +217,11 @@ class Reader:
         self.tty: Tty = tty
         self.mail: Mail = mail
         self.lines: list[str] = []
+<<<<<<< HEAD
         self.link_spans: list[list[tuple[int, int, str]]] = []
+=======
+        self.link_spans: list[list[tuple[int, int]]] = []
+>>>>>>> c2892da (rebase local changes on main)
         self.top: int = 0
         self.win: curses.window
 
@@ -171,12 +238,19 @@ class Reader:
         if not isinstance(raw, bytes):
             self.lines = ['(Unable to retrieve message)']
             return
+<<<<<<< HEAD
         msg: Message = message_from_bytes(raw)
         text, anchor_spans = self.extract_text(msg)
         text, spans = clean_stray_newline_markers(text, anchor_spans)
         lines, line_spans = split_into_lines(text, spans)
         lines, line_spans = trim_lines(lines, line_spans)
         lines, line_spans = merge_bracket_image_links(lines, line_spans)
+=======
+        msg = message_from_bytes(raw)
+        text, anchor_spans = self.extract_text(msg)
+        text, spans = clean_stray_newline_markers(text, anchor_spans)
+        lines, line_spans = split_into_lines(text, spans)
+>>>>>>> c2892da (rebase local changes on main)
         self.lines = lines or ['(No content)']
         self.link_spans = line_spans or [[]]
         self.linkify()
@@ -191,7 +265,11 @@ class Reader:
         self.lines = new_lines
         self.link_spans = new_spans
 
+<<<<<<< HEAD
     def extract_text(self, msg: Message) -> tuple[str, list[tuple[int, int, str]]]:
+=======
+    def extract_text(self, msg) -> tuple[str, list[tuple[int, int]]]:
+>>>>>>> c2892da (rebase local changes on main)
         if msg.is_multipart():
             plain = None
             html_part = None
@@ -218,7 +296,11 @@ class Reader:
             return unescape(content), []
 
     def decode_part(self, part) -> str:
+<<<<<<< HEAD
         """Handles Base64 / QP decoding. Returns decoded string."""
+=======
+        # get_payload(decode=True) handles Base64 / Quoted-Printable transfer encodings
+>>>>>>> c2892da (rebase local changes on main)
         payload = part.get_payload(decode=True) or b''
         charset = part.get_content_charset() or 'utf-8'
         try:
@@ -252,6 +334,7 @@ class Reader:
             self.render_line(y, self.lines[idx], self.link_spans[idx])
         self.win.refresh()
 
+<<<<<<< HEAD
     def render_line(self, y: int, line: str, spans: list[tuple[int, int, str]]) -> None:
         pos = 0
         for start, end, kind in spans:
@@ -259,6 +342,14 @@ class Reader:
                 self.tty.safe_addstr(self.win, y, pos, line[pos:start])
             attr = self.tty.element_attr if kind == 'element' else self.tty.link_attr
             self.tty.safe_addstr(self.win, y, start, line[start:end], attr)
+=======
+    def render_line(self, y: int, line: str, spans: list[tuple[int, int]]) -> None:
+        pos = 0
+        for start, end in spans:
+            if start > pos:
+                self.tty.safe_addstr(self.win, y, pos, line[pos:start])
+            self.tty.safe_addstr(self.win, y, start, line[start:end], self.tty.link_attr)
+>>>>>>> c2892da (rebase local changes on main)
             pos = end
         if pos < len(line):
             self.tty.safe_addstr(self.win, y, pos, line[pos:])
@@ -349,8 +440,12 @@ class MessageList:
         for row_idx, msg_idx in enumerate(range(self.top, end)):
             msg = self.messages[msg_idx]
             y = row_idx * 2
+<<<<<<< HEAD
             # curses has no true semi-bold attribute - A_BOLD is the closest available
             attr = self.tty.highlight_attr | curses.A_BOLD if msg_idx == self.cursor else self.tty.default_attr
+=======
+            attr = self.tty.highlight_attr if msg_idx == self.cursor else self.tty.default_attr
+>>>>>>> c2892da (rebase local changes on main)
             marker = '*' if msg['selected'] else ' '
             self.tty.safe_addstr(self.win, y, 0, f"{marker}From: {msg['from']}", attr)
             self.tty.safe_addstr(self.win, y + 1, 0, f" Subject: {msg['subject']}", attr)
@@ -360,6 +455,7 @@ class MessageList:
         self.render_modeline()
 
     def render_modeline(self) -> None:
+<<<<<<< HEAD
         rows, cols = self.tty.size
         total = len(self.ids)
         pos = self.cursor + 1 if total else 0
@@ -369,6 +465,21 @@ class MessageList:
         self.tty.safe_addstr(self.tty.stdscr, row, 1, text, self.tty.highlight_attr|curses.A_BOLD)
         self.tty.stdscr.refresh()
 
+=======
+        rows, _ = self.tty.size
+        total = len(self.ids)
+        pos = self.cursor + 1 if total else 0
+        text = f'({pos} / {total})'
+        self.tty.stdscr.move(rows - 1, 0)
+        self.tty.stdscr.clrtoeol()
+        self.tty.safe_addstr(self.tty.stdscr, rows - 1, 0, text, self.tty.default_attr)
+        self.tty.stdscr.refresh()
+
+    def post_read(self, msg: dict[str, Any]) -> None:
+        # Default: message stays visible (e.g. Inbox view shows read mail too)
+        pass
+
+>>>>>>> c2892da (rebase local changes on main)
     def open_message(self) -> None:
         if not self.messages:
             return
@@ -379,6 +490,10 @@ class MessageList:
         except self.mail.server.error:
             return
         reader.run()
+<<<<<<< HEAD
+=======
+        self.post_read(msg)
+>>>>>>> c2892da (rebase local changes on main)
         self.tty.stdscr.clear()
 
     def find_archive_mailbox(self) -> str | None:
@@ -417,8 +532,13 @@ class MessageList:
             sibling.purge(ids)
         self.tty.stdscr.clear()
 
+<<<<<<< HEAD
     def refresh_messages(self) -> None:
         """Re-fetches ids and the first page from the server, discarding cached state"""
+=======
+    def refresh(self) -> None:
+        # Re-fetches ids and the first page from the server, discarding cached state
+>>>>>>> c2892da (rebase local changes on main)
         self.ids = []
         self.messages = []
         self.cursor = 0
@@ -427,10 +547,17 @@ class MessageList:
         self.ensure_loaded()
 
     def refresh_everywhere(self) -> None:
+<<<<<<< HEAD
         self.refresh_messages()
         for sibling in self.sibling_lists:
             if sibling.initialized:
                 sibling.refresh_messages()
+=======
+        self.refresh()
+        for sibling in self.sibling_lists:
+            if sibling.initialized:
+                sibling.refresh()
+>>>>>>> c2892da (rebase local changes on main)
         self.tty.stdscr.clear()
 
     def delete_selected(self) -> None:
@@ -493,6 +620,7 @@ class InboxList(MessageList):
         super().__init__(tty, mail, search_criteria='ALL', sort_desc=True)
 
 
+<<<<<<< HEAD
 class SearchList(MessageList):
     def __init__(self, tty: Tty, mail: Mail, candidates: list[dict[str, Any]]):
         # Not an IMAP query: a local fuzzy match over messages that have
@@ -528,6 +656,8 @@ class SearchList(MessageList):
         self.top = 0
 
 
+=======
+>>>>>>> c2892da (rebase local changes on main)
 class App:
     def __init__(self, tty: Tty, mail: Mail):
         self.tty: Tty = tty
@@ -537,14 +667,21 @@ class App:
             'Unread': UnreadList(tty, mail),
             'Inbox': InboxList(tty, mail),
         }
+<<<<<<< HEAD
         self._rewire_siblings()
         self.index: int = 0
         # Tab to return to when the Search tab is closed (via Esc or Tab)
         self.previous_tab: str = 'Unread'
+=======
+        for name in self.order:
+            self.tabs[name].sibling_lists = [self.tabs[n] for n in self.order if n != name]
+        self.index: int = 0
+>>>>>>> c2892da (rebase local changes on main)
 
     def active(self) -> MessageList:
         return self.tabs[self.order[self.index]]
 
+<<<<<<< HEAD
     def _rewire_siblings(self) -> None:
         for name in self.order:
             self.tabs[name].sibling_lists = [self.tabs[n] for n in self.order if n != name]
@@ -653,6 +790,39 @@ class App:
             if key == ord('/'):
                 self.open_search()
                 continue
+=======
+    def render_tab_bar(self) -> None:
+        self.tty.stdscr.move(0, 0)
+        self.tty.stdscr.clrtoeol()
+        x = 1
+        for i, name in enumerate(self.order):
+            label = f' {name} '
+            attr = self.tty.highlight_attr if i == self.index else self.tty.default_attr
+            self.tty.safe_addstr(self.tty.stdscr, 0, x, label, attr)
+            x += len(label) + 1
+        self.tty.stdscr.refresh()
+
+    def run(self) -> None:
+        _ = curses.curs_set(0)
+        self.tty.stdscr.clear()
+        self.tty.stdscr.refresh()
+        rows, cols = self.tty.size
+        for tab in self.tabs.values():
+            tab.win = self.tty.stdscr.derwin(rows - 2, cols, 1, 0)
+        self.active().ensure_loaded()
+        while True:
+            self.render_tab_bar()
+            active = self.active()
+            active.render()
+            key = self.tty.stdscr.getch()
+            if key == ord('\t'):
+                self.index = (self.index + 1) % len(self.order)
+                self.tty.stdscr.clear()
+                self.active().refresh()
+                continue
+            if key in (ord('q'), ord('Q')):
+                break
+>>>>>>> c2892da (rebase local changes on main)
             active.handle_key(key)
 
 
@@ -662,7 +832,11 @@ class User:
         self.mail: Mail = mail
         self.home: str | None = getenv('HOME')
         self.cfg_dir: str = '.pymap'
+<<<<<<< HEAD
         self.cfg_path: str = path.join(cast(str, self.home), self.cfg_dir)
+=======
+        self.cfg_path: str = path.join(self.home, self.cfg_dir)
+>>>>>>> c2892da (rebase local changes on main)
         self.cfg_email: str = path.join(self.cfg_path, '.email')
         self.cfg_pass: str = path.join(self.cfg_path, '.pass')
         self.cfg_token: str = path.join(self.cfg_path, '.token')

@@ -3,16 +3,38 @@ import re
 from typing import Callable
 
 URL_RE = re.compile(r'(?:https?://|www\.)\S+', re.IGNORECASE)
+<<<<<<< HEAD
 URL_WRAPPER_CHARS = '<>[]{}()|'
 URL_SENTENCE_PUNCTUATION = '.,;:!?\'"'
 PIPE_DIVIDER_RE = re.compile(r'\s*\|\s*')
 STRAY_NEWLINE_MARKER_RE = re.compile(r'/n')
 
 Span = tuple[int, int, str]
+=======
+# Plain-text emails commonly wrap or delimit auto-linked URLs with these
+# characters (e.g. "<https://example.com>", "[https://example.com]",
+# "http://a.com|http://b.com"). None of them are ever legitimately part of a
+# bare URL, so they terminate the match and are dropped from the output
+# entirely - both when they precede, are embedded in, or follow the URL.
+URL_WRAPPER_CHARS = '<>[]{}()|'
+# Legitimate trailing prose punctuation: excluded from the link itself, but
+# (unlike wrapper characters) left in place in the surrounding text.
+URL_SENTENCE_PUNCTUATION = '.,;:!?\'"'
+# Email footers commonly separate links with a bare "|" (e.g.
+# "Privacy Policy <link> | Unsubscribe <link>"). It is never meaningful
+# prose, so it is collapsed away wherever it appears as its own token.
+PIPE_DIVIDER_RE = re.compile(r'\s*\|\s*')
+# Some message templates leak a literal "/n" artifact where an actual
+# newline was intended (e.g. a template's '\n' escape getting mangled).
+STRAY_NEWLINE_MARKER_RE = re.compile(r'/n')
+
+Span = tuple[int, int]
+>>>>>>> c2892da (rebase local changes on main)
 EditFn = Callable[[str], tuple[str, list[Span]]]
 
 
 def _apply_outside_spans(text: str, protected: list[Span], edit: EditFn) -> tuple[str, list[Span]]:
+<<<<<<< HEAD
     """
     Rebuilds `text`, leaving each `protected` range's content completely
     untouched, and running `edit` on every other (gap) substring. `edit`
@@ -25,25 +47,53 @@ def _apply_outside_spans(text: str, protected: list[Span], edit: EditFn) -> tupl
     spans: list[Span] = []
     pos = 0
     for p_start, p_end, p_kind in sorted(protected, key=lambda s: (s[0], s[1])):
+=======
+    # Rebuilds `text`, leaving each `protected` range's content completely
+    # untouched, and running `edit` on every other (gap) substring. `edit`
+    # returns (new_gap_text, spans_within_that_new_gap_text). The result is
+    # the rebuilt text plus one combined, ascending span list covering both
+    # the untouched protected ranges and any spans `edit` introduced - all
+    # remapped into the rebuilt text's coordinates.
+    pieces: list[str] = []
+    spans: list[Span] = []
+    pos = 0
+    for p_start, p_end in sorted(protected):
+>>>>>>> c2892da (rebase local changes on main)
         if p_start < pos:
             continue  # overlapping/out-of-order protected span; skip defensively
         gap_text, gap_spans = edit(text[pos:p_start])
         base = sum(len(p) for p in pieces)
         pieces.append(gap_text)
+<<<<<<< HEAD
         spans.extend((base + s, base + e, kind) for s, e, kind in gap_spans)
         protected_base = sum(len(p) for p in pieces)
         pieces.append(text[p_start:p_end])
         spans.append((protected_base, protected_base + (p_end - p_start), p_kind))
+=======
+        spans.extend((base + s, base + e) for s, e in gap_spans)
+        protected_base = sum(len(p) for p in pieces)
+        pieces.append(text[p_start:p_end])
+        spans.append((protected_base, protected_base + (p_end - p_start)))
+>>>>>>> c2892da (rebase local changes on main)
         pos = p_end
     gap_text, gap_spans = edit(text[pos:])
     base = sum(len(p) for p in pieces)
     pieces.append(gap_text)
+<<<<<<< HEAD
     spans.extend((base + s, base + e, kind) for s, e, kind in gap_spans)
+=======
+    spans.extend((base + s, base + e) for s, e in gap_spans)
+>>>>>>> c2892da (rebase local changes on main)
     return ''.join(pieces), spans
 
 
 def _clean_stray_newline_markers_gap(gap: str) -> tuple[str, list[Span]]:
+<<<<<<< HEAD
     # Only convert "/n" outside of URLs
+=======
+    # Only convert "/n" outside of URLs, since it's also a common, entirely
+    # legitimate URL path segment (e.g. ".../news", ".../notifications").
+>>>>>>> c2892da (rebase local changes on main)
     pieces: list[str] = []
     pos = 0
     for match in URL_RE.finditer(gap):
@@ -55,10 +105,16 @@ def _clean_stray_newline_markers_gap(gap: str) -> tuple[str, list[Span]]:
 
 
 def clean_stray_newline_markers(text: str, protected: list[Span] = ()) -> tuple[str, list[Span]]:
+<<<<<<< HEAD
+=======
+    # `protected` spans (e.g. retained <a> label text) are passed through
+    # untouched and are never scanned for "/n" artifacts.
+>>>>>>> c2892da (rebase local changes on main)
     return _apply_outside_spans(text, list(protected), _clean_stray_newline_markers_gap)
 
 
 def _linkify_gap(gap: str) -> tuple[str, list[Span]]:
+<<<<<<< HEAD
     """
     Replaces bare URLs in a gap of text with the word "Link", returning the
     new gap text plus the (start, end, 'link') span of each replacement.
@@ -66,6 +122,10 @@ def _linkify_gap(gap: str) -> tuple[str, list[Span]]:
     render an <a href> as "Label (https://...)" - retain the label and
     drop the parenthetical URL entirely in that case, instead.
     """
+=======
+    # Replaces bare URLs in a gap of text with the word "Link", returning the
+    # new gap text plus the (start, end) column span of each replacement.
+>>>>>>> c2892da (rebase local changes on main)
     gap = PIPE_DIVIDER_RE.sub(' ', gap)
     spans: list[Span] = []
     pieces: list[str] = []
@@ -88,6 +148,7 @@ def _linkify_gap(gap: str) -> tuple[str, list[Span]]:
             search_pos = end
             continue
         end = start + len(token)
+<<<<<<< HEAD
 
         if start > pos and gap[start - 1] == '(' and end < len(gap) and gap[end] == ')':
             before = gap[pos:start - 1]
@@ -102,6 +163,8 @@ def _linkify_gap(gap: str) -> tuple[str, list[Span]]:
                 search_pos = pos
                 continue
 
+=======
+>>>>>>> c2892da (rebase local changes on main)
         # Drop any wrapper characters immediately preceding the URL
         while start > pos and gap[start - 1] in URL_WRAPPER_CHARS:
             start -= 1
@@ -111,7 +174,11 @@ def _linkify_gap(gap: str) -> tuple[str, list[Span]]:
         pieces.append(gap[pos:start])
         link_start = sum(len(p) for p in pieces)
         pieces.append('Link')
+<<<<<<< HEAD
         spans.append((link_start, link_start + 4, 'link'))
+=======
+        spans.append((link_start, link_start + 4))
+>>>>>>> c2892da (rebase local changes on main)
         pos = end
         search_pos = end
     pieces.append(gap[pos:])
@@ -119,6 +186,14 @@ def _linkify_gap(gap: str) -> tuple[str, list[Span]]:
 
 
 def linkify_line(line: str, protected: list[Span] = ()) -> tuple[str, list[Span]]:
+<<<<<<< HEAD
+=======
+    # `protected` spans (e.g. retained <a> label text) are kept verbatim -
+    # they are never themselves replaced with the word "Link", even if their
+    # text happens to look like a URL. The returned spans cover both those
+    # passed-through ranges and any new "Link" substitutions, since both are
+    # rendered with the same color.
+>>>>>>> c2892da (rebase local changes on main)
     return _apply_outside_spans(line, list(protected), _linkify_gap)
 
 
@@ -132,19 +207,28 @@ def split_into_lines(text: str, spans: list[Span]) -> tuple[list[str], list[list
     for line in lines:
         starts.append(offset)
         offset += len(line) + 1
+<<<<<<< HEAD
     for start, end, kind in spans:
+=======
+    for start, end in spans:
+>>>>>>> c2892da (rebase local changes on main)
         for i, line_start in enumerate(starts):
             line_end = line_start + len(lines[i])
             if line_start <= start <= line_end:
                 local_start = start - line_start
                 local_end = min(end - line_start, len(lines[i]))
                 if local_end > local_start:
+<<<<<<< HEAD
                     per_line[i].append((local_start, local_end, kind))
+=======
+                    per_line[i].append((local_start, local_end))
+>>>>>>> c2892da (rebase local changes on main)
                 break
     while len(lines) > 1 and lines[-1] == '':
         lines.pop()
         per_line.pop()
     return lines, per_line
+<<<<<<< HEAD
 
 
 BRACKET_ONLY_RE = re.compile(r'^\[(.+)\]$')
@@ -210,3 +294,5 @@ def trim_lines(lines: list[str], spans: list[list[Span]]) -> tuple[list[str], li
         trimmed_lines.pop()
         trimmed_spans.pop()
     return trimmed_lines, trimmed_spans
+=======
+>>>>>>> c2892da (rebase local changes on main)

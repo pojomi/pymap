@@ -14,6 +14,10 @@ if TYPE_CHECKING:
 def parse_mailbox_name(list_line: str) -> str | None:
     # Parses the mailbox name out of an IMAP LIST response line, e.g.
     # '(\\Archive) "/" "[Gmail]/All Mail"' -> '[Gmail]/All Mail'.
+<<<<<<< HEAD
+=======
+    # The name may be a quoted string (which can contain spaces) or a bare atom.
+>>>>>>> c2892da (rebase local changes on main)
     match = re.search(r'"((?:[^"\\]|\\.)*)"\s*$', list_line)
     if match:
         return match.group(1).replace('\\"', '"').replace('\\\\', '\\')
@@ -49,16 +53,24 @@ def fetch_message_headers(mail: 'Mail', ids: list[str]) -> list[dict[str, Any]]:
             if isinstance(entry, tuple) and isinstance(entry[0], bytes) \
                     and pattern.search(entry[0].decode(errors='replace')):
                 header_msg = message_from_bytes(entry[1])
+<<<<<<< HEAD
                 from_header = header_msg.get('From', '')
                 realname, addr = parseaddr(from_header)
                 display_name = decode_mime_words(realname).strip()
                 from_display = display_name or addr or from_header
+=======
+                from_addr = parseaddr(header_msg.get('From', ''))[1] or header_msg.get('From', '')
+>>>>>>> c2892da (rebase local changes on main)
                 subject = decode_mime_words(header_msg.get('Subject'))
                 if not subject:
                     subject = 'None'
                 results.append({
                     'id': msg_id,
+<<<<<<< HEAD
                     'from': from_display,
+=======
+                    'from': from_addr,
+>>>>>>> c2892da (rebase local changes on main)
                     'subject': subject,
                     'selected': False,
                 })
