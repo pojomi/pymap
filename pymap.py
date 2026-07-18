@@ -95,9 +95,15 @@ def main(stdscr: window) -> None:
         mail.server.logout()
     except Exception:
         pass
+<<<<<<< HEAD
 
 >>>>>>> 3815c75 (WIP)
 
+<<<<<<< HEAD
 >>>>>>> 2db2a01 (WIP)
+=======
+=======
+>>>>>>> 96ba07e (Add local fuzzy search with live-updating Search tab)
+>>>>>>> 213f8dd (Add R keybind to refresh all tabs simultaneously)
 # Wrapper is from curses module; initializes window, colors, etc automatically
 wrapper(main)

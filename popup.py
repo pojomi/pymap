@@ -1,10 +1,14 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 <<<<<<< HEAD
+<<<<<<< HEAD
 from typing import TYPE_CHECKING, Callable
 =======
 from typing import TYPE_CHECKING
 >>>>>>> c2892da (rebase local changes on main)
+=======
+from typing import TYPE_CHECKING, Callable
+>>>>>>> 213f8dd (Add R keybind to refresh all tabs simultaneously)
 import curses
 
 if TYPE_CHECKING:
@@ -25,6 +29,9 @@ def show_popup(tty: 'Tty', text: str) -> None:
     tty.safe_addstr(win, 1, max(1, (width - len(text)) // 2), text, tty.ok_attr)
     win.refresh()
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> 213f8dd (Add R keybind to refresh all tabs simultaneously)
 
 
 def prompt_input(
@@ -87,5 +94,8 @@ def prompt_input(
             redraw_box()
     finally:
         _ = curses.curs_set(0)
+<<<<<<< HEAD
 =======
 >>>>>>> c2892da (rebase local changes on main)
+=======
+>>>>>>> 213f8dd (Add R keybind to refresh all tabs simultaneously)

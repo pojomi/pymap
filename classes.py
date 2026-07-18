@@ -26,11 +26,14 @@ from linkify import clean_stray_newline_markers, linkify_line, split_into_lines,
 from imap_utils import parse_mailbox_name, quote_mailbox, fetch_message_headers
 from popup import show_popup, prompt_input
 from fuzzy_search import fuzzy_score, FUZZY_THRESHOLD
+<<<<<<< HEAD
 =======
 from linkify import clean_stray_newline_markers, linkify_line, split_into_lines
 from imap_utils import parse_mailbox_name, quote_mailbox, fetch_message_headers
 from popup import show_popup
 >>>>>>> c2892da (rebase local changes on main)
+=======
+>>>>>>> 213f8dd (Add R keybind to refresh all tabs simultaneously)
 
 
 class Tty:
@@ -533,12 +536,17 @@ class MessageList:
         self.tty.stdscr.clear()
 
 <<<<<<< HEAD
+<<<<<<< HEAD
     def refresh_messages(self) -> None:
         """Re-fetches ids and the first page from the server, discarding cached state"""
 =======
     def refresh(self) -> None:
         # Re-fetches ids and the first page from the server, discarding cached state
 >>>>>>> c2892da (rebase local changes on main)
+=======
+    def refresh_messages(self) -> None:
+        """Re-fetches ids and the first page from the server, discarding cached state"""
+>>>>>>> 213f8dd (Add R keybind to refresh all tabs simultaneously)
         self.ids = []
         self.messages = []
         self.cursor = 0
@@ -547,6 +555,7 @@ class MessageList:
         self.ensure_loaded()
 
     def refresh_everywhere(self) -> None:
+<<<<<<< HEAD
 <<<<<<< HEAD
         self.refresh_messages()
         for sibling in self.sibling_lists:
@@ -558,6 +567,12 @@ class MessageList:
             if sibling.initialized:
                 sibling.refresh()
 >>>>>>> c2892da (rebase local changes on main)
+=======
+        self.refresh_messages()
+        for sibling in self.sibling_lists:
+            if sibling.initialized:
+                sibling.refresh_messages()
+>>>>>>> 213f8dd (Add R keybind to refresh all tabs simultaneously)
         self.tty.stdscr.clear()
 
     def delete_selected(self) -> None:
@@ -621,6 +636,9 @@ class InboxList(MessageList):
 
 
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> 213f8dd (Add R keybind to refresh all tabs simultaneously)
 class SearchList(MessageList):
     def __init__(self, tty: Tty, mail: Mail, candidates: list[dict[str, Any]]):
         # Not an IMAP query: a local fuzzy match over messages that have
@@ -656,8 +674,11 @@ class SearchList(MessageList):
         self.top = 0
 
 
+<<<<<<< HEAD
 =======
 >>>>>>> c2892da (rebase local changes on main)
+=======
+>>>>>>> 213f8dd (Add R keybind to refresh all tabs simultaneously)
 class App:
     def __init__(self, tty: Tty, mail: Mail):
         self.tty: Tty = tty
@@ -668,6 +689,7 @@ class App:
             'Inbox': InboxList(tty, mail),
         }
 <<<<<<< HEAD
+<<<<<<< HEAD
         self._rewire_siblings()
         self.index: int = 0
         # Tab to return to when the Search tab is closed (via Esc or Tab)
@@ -677,11 +699,20 @@ class App:
             self.tabs[name].sibling_lists = [self.tabs[n] for n in self.order if n != name]
         self.index: int = 0
 >>>>>>> c2892da (rebase local changes on main)
+=======
+        self._rewire_siblings()
+        self.index: int = 0
+        # Tab to return to when the Search tab is closed (via Esc or Tab)
+        self.previous_tab: str = 'Unread'
+>>>>>>> 213f8dd (Add R keybind to refresh all tabs simultaneously)
 
     def active(self) -> MessageList:
         return self.tabs[self.order[self.index]]
 
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> 213f8dd (Add R keybind to refresh all tabs simultaneously)
     def _rewire_siblings(self) -> None:
         for name in self.order:
             self.tabs[name].sibling_lists = [self.tabs[n] for n in self.order if n != name]
@@ -781,6 +812,7 @@ class App:
                     self.index = (self.index + 1) % len(self.order)
                     self.tty.stdscr.clear()
                     self.active().refresh_messages()
+<<<<<<< HEAD
                 continue
             if key in (ord('q'), ord('Q')):
                 break
@@ -823,6 +855,17 @@ class App:
             if key in (ord('q'), ord('Q')):
                 break
 >>>>>>> c2892da (rebase local changes on main)
+=======
+                continue
+            if key in (ord('q'), ord('Q')):
+                break
+            if key in (ord('r'), ord('R')):
+                self.refresh_all_tabs()
+                continue
+            if key == ord('/'):
+                self.open_search()
+                continue
+>>>>>>> 213f8dd (Add R keybind to refresh all tabs simultaneously)
             active.handle_key(key)
 
 
